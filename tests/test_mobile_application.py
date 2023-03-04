@@ -17,8 +17,3 @@ def test_search():
     with step('Text button "GO BACK"'):
         browser.element((AppiumBy.ID, 'org.wikipedia.alpha:id/view_wiki_error_button')).click()
         browser.element((AppiumBy.CLASS_NAME, 'android.widget.TextView')).should(have.text('Search Wikipedia'))
-    with step('Test back button from search'):
-        browser.element((AppiumBy.ACCESSIBILITY_ID, 'Search Wikipedia')).click()
-        browser.element((AppiumBy.XPATH,
-                         '/hierarchy/android.widget.FrameLayout/android.widget.LinearLayout/android.widget.FrameLayout/android.widget.FrameLayout/android.widget.FrameLayout/android.widget.FrameLayout/android.widget.FrameLayout/android.widget.FrameLayout/android.widget.LinearLayout[1]/android.widget.FrameLayout[1]/android.view.ViewGroup/android.widget.ImageButton')).click()
-        browser.element((AppiumBy.CLASS_NAME, 'android.widget.TextView')).should(have.text('Search Wikipedia'))

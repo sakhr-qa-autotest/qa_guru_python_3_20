@@ -1,60 +1,88 @@
-import os
 from typing import Literal, Optional
 
 import pydantic
 from appium.options.android import UiAutomator2Options
-from dotenv import load_dotenv
 
-EnvContext = Literal['personal', 'test', 'stage', 'prod']
+import utils.file
+
+EnvContext = Literal['emulation', 'real', 'browserstack']
 
 
 class Settings(pydantic.BaseSettings):
-    context: EnvContext = 'personal'
+    context: EnvContext = 'emulation'
 
     # --- Appium Capabilities ---
-    platformName: str = 'android'
-    platformVersion: str = '9.0'
-    deviceName: str = 'Google Pixel 3'
+    platformName: str = None
+    platformVersion: str = None
+    deviceName: str = None
     app: Optional[str] = None
     appName: Optional[str] = None
+    appWaitActivity: Optional[str] = None
+    newCommandTimeout: Optional[int] = 60
 
     # --- > BrowserStack Capabilities ---
     projectName: Optional[str] = None
     buildName: Optional[str] = None
     sessionName: Optional[str] = None
     # --- > > BrowserStack credentials---
-    userName: Optional[str] = None
+    userLogin: Optional[str] = None
     accessKey: Optional[str] = None
+    udid: Optional[str] = None
 
     # --- Remote Driver ---
-    load_dotenv()
-    remote_url: str = os.getenv('remote_url')
+    remote_url: str = 'http://127.0.0.1:4723/wd/hub'  # it's a default appium server url
 
     # --- Selene ---
     timeout: float = 6.0
 
     @property
+    def run_on_browserstack(self):
+        if self.context == 'browserstack':
+            return 'hub.browserstack.com' in self.remote_url
+        return False
+
+    @property
     def driver_options(self):
-        load_dotenv()
         options = UiAutomator2Options()
-        options.device_name = self.deviceName
-        options.platform_name = self.platformName
-        options.app = self.app
-        if 'hub.browserstack.com' in self.remote_url:
+        if self.deviceName:
+            options.device_name = self.deviceName
+        if self.platformName:
+            options.platform_name = self.platformName
+        options.app = (
+            utils.file.abs_path_from_project(self.app)
+            if self.app and (self.app.startswith('./') or self.app.startswith('../'))
+            else self.app
+        )
+        options.new_command_timeout = self.newCommandTimeout
+        if self.udid:
+            options.udid = self.udid
+        if self.appWaitActivity:
+            options.app_wait_activity = self.appWaitActivity
+        if self.run_on_browserstack:
             options.load_capabilities(
                 {
                     'platformVersion': self.platformVersion,
                     'bstack:options': {
-                        'projectName': os.getenv('projectName'),
-                        'buildName': os.getenv('buildName'),
-                        'sessionName': os.getenv('sessionName'),
-                        'userName': os.getenv('userName'),
-                        'accessKey': os.getenv('accessKey'),
+                        'projectName': self.projectName,
+                        'buildName': self.buildName,
+                        'sessionName': self.sessionName,
+                        'userName': self.userLogin,
+                        'accessKey': self.accessKey,
                     },
                 }
             )
 
         return options
 
+    @classmethod
+    def in_context(cls, env: Optional[EnvContext] = None) -> 'Settings':
+        """
+        factory method to init Settings with values from corresponding .env file
+        """
+        asked_or_current = env or cls().context
+        return cls(
+            _env_file=utils.file.abs_path_from_project(f'config.{asked_or_current}.env')
+        )
 
-settings = Settings()
+
+settings = Settings.in_context()
