@@ -56,6 +56,7 @@ class Settings(pydantic.BaseSettings):
         options.new_command_timeout = self.newCommandTimeout
         if self.udid:
             options.udid = self.udid
+            options.ignore_hidden_api_policy_error = True
         if self.appWaitActivity:
             options.app_wait_activity = self.appWaitActivity
         if self.run_on_browserstack:
